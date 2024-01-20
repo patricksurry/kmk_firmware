@@ -33,7 +33,7 @@ class HexCompose(Module):
         self.encoding = encoding
         self._hex_keys = [
             make_key(
-                names=(f'HEX{digit:x}'.upper(), ),
+                names=(f'HEX{digit:x}'.upper(), f'{digit:x}\u0353'.upper()),  # combining X below
                 meta=digit,
             )
             for digit in range(16)
@@ -72,15 +72,15 @@ class HexCompose(Module):
             return key
         elif not is_pressed:
             return None
-        
+
         digit = key.meta
         print("HexCompose: got hex key", digit)
 
-        # half way thru a byte?  
+        # half way thru a byte?
         if self._hi_nibble is None:
             self._hi_nibble = digit << 4
             return None
-                
+
         # otherwise add a byte
         self._bytes += bytes([self._hi_nibble + digit])
         self._hi_nibble = None
@@ -100,10 +100,10 @@ class HexCompose(Module):
                     print(f'HexCompose: invalid utf-8 continuation in {self._bytes}')
                     self.reset()
                     return None
-                
+
         if len(self._bytes) != self._bytes_needed:
             return None
-        
+
         print('HexCompose: completed bytes', self._bytes)
         character = self._bytes.decode(self.encoding)[0]
         c = ord(character)
@@ -114,6 +114,6 @@ class HexCompose(Module):
             composed_key = unicode_string_sequence(character)
             print('HexCompose: sending unicode for', character, composed_key)
 
-        self.reset()        
+        self.reset()
 
         return composed_key

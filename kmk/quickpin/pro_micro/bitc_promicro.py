@@ -7,15 +7,14 @@ pinout = [
     board.D1,   # Enc 3
     None,  # GND
     None,  # GND
-    board.D2,   # Enc 2
-    board.D3,   # Enc 2
-    board.D4,   # Row 4 + breakout SDA
-    board.D5,   # Row 3 + breakout SCL
-    board.D6,   # Row 2
-    board.D7,   # Row 1
-    board.D8,   # Enc 1
-    board.D9,   # Enc 1
-
+    board.D2,  # Enc 2
+    board.D3,  # Enc 2
+    board.D4,  # Row 4 + breakout SDA0
+    board.D5,  # Row 3 + breakout SCL0
+    board.D6,  # Row 2
+    board.D7,  # Row 1
+    board.D8,  # Enc 1
+    board.D9,  # Enc 1
     # Unconnected breakout pins D11, D12, GND, D13, D14
 
     board.D21,  # WS2812 LEDs labeled D10/GP21 but only board.D21 is defined
