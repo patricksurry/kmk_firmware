@@ -7,6 +7,9 @@ from kmk.scanners import DiodeOrientation
 from kmk.modules.encoder import EncoderHandler
 
 
+from via import VIAShifter
+
+
 encoder_pinout = [
     (pins[13],  pins[14],   None),      # enc 0, button mapped in matrix
     (pins[10],  pins[11],   None),      # enc 1 (optional)
@@ -58,3 +61,11 @@ class KMKKeyboard(_KMKKeyboard):
             self.encoders = EncoderHandler()
             self.encoders.pins = tuple([encoder_pinout[i] for i in active_encoders])
             self.modules.append(self.encoders)
+
+        self.VIA = VIAShifter()
+
+    def _send_hid(self):
+        for key in self.keys_pressed:
+            self.VIA.sendKey(key)
+
+        super()._send_hid()
