@@ -1,7 +1,6 @@
 import digitalio
 import microcontroller
-import countio
-from time import sleep, monotonic
+from time import sleep
 
 from kmk.keys import Key, KC
 
@@ -11,8 +10,8 @@ from kmk.keys import Key, KC
 #
 #   Wire    Cnxn      GPIO  SPI   UART  I2C   PWM  countio?
 #
-#   Blue    * I-PHI2   11   TX1   RTS1  SCL1  5B   ok
-#   Purple  * I-IRQ    12   RX1   TX0   SDA0  6A
+#   Blue    nc         11   TX1   RTS1  SCL1  5B   ok
+#   Purple  O-RDY      12   RX1   TX0   SDA0  6A
 #   Grey    O-SDA      13   CSn1  RX0   SCL0  6B   ok
 #   White   O-SCL      14   SCK1  CTS0  SDA1  7A
 #   Black   GND        GND
@@ -23,7 +22,7 @@ from kmk.keys import Key, KC
 # places on the BITC-PRO board which has VCC, GND, SDA0 (D4), SCL0 (D5)
 # Unfortunately D4/D5 are already mapped in the matrix
 
-# (2) On RP2040, Counter uses the PWM peripheral, and is limited
+# (2) On RP2040, countio.Counter uses the PWM peripheral, and is limited
 # to PWM channel B pins due to hardware restrictions
 
 MOD_CTL = 0x11
@@ -54,34 +53,16 @@ class VIAShifter:
         mcp = microcontroller.pin
         dio = digitalio.DigitalInOut
 
-        self.CLK = mcp.GPIO11
-        self.IRQ = dio(mcp.GPIO12)
-        self.SDA = dio(mcp.GPIO13)    # CB2 serial data
-        self.SCL = dio(mcp.GPIO14)    # CB1 ext clock
+        self.RDY = dio(mcp.GPIO12)    # SR RCLK / handshake
+        self.SDA = dio(mcp.GPIO13)    # SR serial data
+        self.SCL = dio(mcp.GPIO14)    # SR shift clock
 
-        self.IRQ.direction = digitalio.Direction.INPUT
-        self.IRQ.pull = digitalio.Pull.UP      # IRQB=LOW on interrupt
-
-        self.SDA.direction = digitalio.Direction.OUTPUT
-        self.SDA.value = False
-
-        self.SCL.direction = digitalio.Direction.OUTPUT
-        self.SCL.value = False
+        for p in (self.RDY, self.SDA, self.SCL):
+            p.direction = digitalio.Direction.OUTPUT
+            p.value = False
 
         self.mapKeys()
-        self.checkClock()
-
-    def checkClock(self):
-        # check if clock is active
-        start = monotonic()
-        ticks = countio.Counter(self.CLK, edge=countio.Edge.FALL)
-        self.debug_leds(slow=True)
-        n = ticks.count
-        elapsed = (monotonic() - start)
-
-        ticks.deinit()
-        self.active = elapsed > 1 and n > 3
-        print(f"VIAShifter[active={self.active}]: saw {n} ticks in {elapsed}s")
+        self.debugMorse('---   -.-')
 
     def mapKey(self, key: Key, ascii: int):
         # each key code maaps to a tuple of unshifted and shifted instance
@@ -137,7 +118,7 @@ class VIAShifter:
             self.mapKey(key, ascii)
 
     def sendKey(self, key: Key):
-        if not self.active or not hasattr(key, 'code'):
+        if not hasattr(key, 'code'):
             return
 
         vs = self.keymap.get(key.code)
@@ -150,51 +131,41 @@ class VIAShifter:
             if flags & (MOD_CMD | MOD_ALT):
                 v |= 0x80       # cmd or alt sets high bit
             print(f"VIAShifter: sending {key} as ${v:02x} {chr(v)}")
-            self.debug_leds()
+            self.debugMorse('-')
             self.shiftByteOut(v)
         else:
             print(f"VIAShifter: no ascii mapping for {key}")
 
     def shiftByteOut(self, v: int):
-        # NB http://forum.6502.org/viewtopic.php?p=2310#p2310
-        # If the edge on CB1 falls within a few nanoseconds of the falling edge of phase 2,
-        # the CB1 edge will be ignored, so you lose a bit
-        # so even tho 6502 clock cycle is measured on falling edge, we watch rising ones
-        with countio.Counter(self.CLK, edge=countio.Edge.RISE) as phi:
-            # write the byte from MSB -> LSB
-            for _ in range(8):
-                self.SDA.value = bool(v & 0x80)     # setup the MSB
-                v <<= 1                             # shift for next bit
-                phi.reset()
-                while not phi.count:
-                    continue
-                self.SCL.value = True               # pulse external clock just after rising edge
-                # need a full 6502 clock cycle (measured on falling edge) to ensure incoming bit latch
-                phi.reset()
-                while phi.count < 2:
-                    pass
-                self.SCL.value = False  # stop our clock pulse
-        self.SDA.value = False  # not stricly needed but nicer for LED debugging
+        # The '595 shift register shifts SDA in on SCLK rising edge
+        # and latches data to register on RCLK (our 'ready' handshake)
 
-    def debug_leds(self, slow=False):
-        if slow:
-            for _ in range(3):
-                for p in [self.SDA, self.SCL]:
-                    p.value = True
-                    sleep(0.2)
-                    p.value = False
+        # write the byte from MSB -> LSB
+        for _ in range(8):
+            self.SDA.value = bool(v & 0x80)     # setup the MSB
+            v <<= 1                             # shift for next bit
+            self.SCL.value = True               # pulse external clock
+            self.SCL.value = False              # stop our clock pulse
 
-            for _ in range(3):
-                self.SDA.value = True
-                self.SCL.value = True
-                sleep(0.2)
-                self.SDA.value = False
-                self.SCL.value = False
-                sleep(0.2)
-        else:
-            self.SDA.value = True
-            self.SCL.value = True
-            sleep(0.1)
-            self.SDA.value = False
-            self.SCL.value = False
+        self.SDA.value = False                  # clear SDA for LED debugging
 
+        # pulse the handshake to latch data and handshake VIA (on falling/negative edge)
+        self.RDY.value = True
+        self.RDY.value = False
+
+    def debugMorse(self, morse='---   -.-', dit=0.1):
+        # flash data pin with morse chars '-', '.', ' '
+        # note this isn't clocked so shouldn't be recognized as input
+        # separate letters by one space leading to 3 dit better letters
+        # separate words by three space leading to 7 dit between words
+        p = self.SDA
+        for c in morse:
+            if c == ' ':
+                p.value = False
+                sleep(dit)            # 1 + 1 + 1 dit between letters
+            else:
+                p.value = True
+                sleep(dit*(3 if c == '-' else 1))
+                p.value = False
+            sleep(dit)              # 1 dit between intra-letter dit/dah
+        p.value = False
