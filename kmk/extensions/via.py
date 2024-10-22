@@ -149,7 +149,7 @@ class VIAShifter(Extension):
 
     def shiftByteOut(self, v: int):
         # The '595 shift register shifts SDA in on SCLK rising edge
-        # and latches data to register on RCLK (our 'ready' handshake)
+        # and latches data to register on RCLK rising edge (our 'ready' handshake)
 
         # write the byte from MSB -> LSB
         for _ in range(8):
@@ -160,7 +160,8 @@ class VIAShifter(Extension):
 
         self.SDA.value = False                  # clear SDA for LED debugging
 
-        # pulse the handshake to latch data and handshake VIA (on falling/negative edge)
+        # pulse the handshake to latch data (rising/+ve edge)
+        # and generate VIA interrupt (on falling/-ve edge)
         self.RDY.value = True
         self.RDY.value = False
 
