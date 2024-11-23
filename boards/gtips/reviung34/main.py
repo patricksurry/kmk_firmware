@@ -1,7 +1,6 @@
 from kb import KMKKeyboard
 
 from kmk.extensions.peg_rgb_matrix import Rgb_matrix
-from kmk.extensions.rgb import RGB
 from kmk.keys import KC
 from kmk.modules.layers import Layers
 
@@ -35,6 +34,7 @@ XXXXXXX = KC.NO
 LOWER = KC.MO(2)
 RAISE = KC.MO(1)
 
+# fmt:off
 keyboard.keymap = [
     [   # QWERTY
         KC.Q,    KC.W,    KC.E,    KC.R,    KC.T,               KC.Y,    KC.U,    KC.I,    KC.O,    KC.P,
@@ -55,6 +55,7 @@ keyboard.keymap = [
                                      XXXXXXX, XXXXXXX,       KC.ENT,  KC.DEL,
     ],
 ]
+# fmt:on
 
 if __name__ == '__main__':
     keyboard.go()

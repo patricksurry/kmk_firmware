@@ -4,7 +4,108 @@
 can be found in [`keycodes.md`](keycodes.md). It's probably worth a look at the raw source if
 you're stumped: [`kmk/keys.py`](/kmk/keys.py).
 
----
+## Custom Keys
+
+Here's a very contrived example for a custom key with a limit to the number of
+times it can used (until the next keyboard reset).
+Custom keys are, as a rule of thumb, the way to go to implement custom
+functionality.
+If the objective is to type out a sequence of keys however, or an action has to
+be performed asynchronously while holding a key down, then [macros](macros.md)
+are worth trading higher convenience for the hit in performance.
+
+### Quick and Dirty
+
+The base key class, of which all keys are derived, accepts custom handlers.
+It's "single use", should be fine for most use cases, but is not recommended for
+stateful keys.
+Note: Both `on_press` and `on_release` methods are optional and a custom key is
+allowed to have none of the two and do absolutely nothing.
+
+```python
+from kmk.keys import Key
+
+limit = 10
+
+def limit_on_press(key, keyboard, *args):
+    global limit
+    if limit > 0:
+       keyboard.add_key(KC.A)
+
+def limit_on_release(key, keyboard, *args):
+    global limit
+    if limit > 0:
+        keyboard.remove_key(KC.A)
+        limit -= 1
+
+KC_A10 = Key(on_press=limit_on_press, on_release=limit_on_release)
+```
+
+### Generally Recommended
+
+Reusable or stateful keys are better implemented as a custom key derived from
+the base class.
+Giving the key a custom type (i.e. name) can make it easier to spot in
+debug messages and opens up to possibility to react on key types in custom
+modules; the downside is a potential slight increase in memory consumption.
+All methods are technically optional, although it is recommended to implement
+them anyway or the default implementations of `Key` may look for handlers that
+don't exist.
+
+```python
+from kmk.keys import Key
+
+class LimitKey(Key):
+    def __init__(self, key, limit):
+        self.key = KC.A
+        self.limit = limit
+
+    def on_press(self, keyboard, coord_int=None):
+        if self.limit > 0:
+            keyboard.add_key(self.key)
+
+    def on_release(self, keyboard, coord_int=None):
+        if self.limit > 0:
+            self.limit -= 1
+            keyboard.remove_key(self.key)
+
+KC_A10 = LimitKey(KC.A, 10)
+KC_B20 = LimitKey(KC.B, 20)
+```
+
+### Unnecessary
+
+For completeness sake: this is how keys can be entered into the `KC` dictionary.
+There's no reason to do this as it will have a negative, if probably small
+effect on memory usage with no actual benefit.
+
+```python
+from kmk.keys import make_key
+
+# with an instance of base key class with 1 alias
+make_key(
+    names=('A10',),
+    constructor=Key,
+    on_press=limit_on_press,
+    on_release=limit_on_release,
+)
+
+# with a custom base key class with 3 aliases
+make_key(
+    names=('B20', 'LIMIT_B_20', 'B_ONLY_20_TIMES'),
+    constructor=LimitKey,
+    key=KC.B,
+    count=20,
+)
+
+# makes those keys available as:
+KC.A10
+KC.B20
+KC.LIMIT_B_20
+KC.B_ONLY_20_TIMES
+```
+
+## Key Objects
 
 This is a bunch of documentation about how a physical keypress translates to
 events (and the lifecycle of said events) in KMK. It's somewhat technical, but
@@ -25,36 +126,15 @@ The next few steps are the interesting part, but to understand them, we need to
 understand a bit about what a `Key` object is (found in [`kmk/keys.py`](/kmk/keys.py)). `Key`
 objects have a few core pieces of information:
 
-- Their `code`, which can be any integer. Integers below
-  `FIRST_KMK_INTERNAL_KEY` are sent through to the HID stack (and thus the
-  computer, which will translate that integer to something meaningful - for
-  example, `code=4` becomes `a` on a US QWERTY/Dvorak keyboard).
-
-- Their attached modifiers (to implement things like shifted keys or `KC.HYPR`,
-  which are single key presses sending along more than one key in a single HID
-  report. This is a distinct concept from Sequences, which are a KMK feature
-  documented in [`sequences.md`](sequences.md)). For almost all purposes outside of KMK core,
-  this field should be ignored - it can be safely populated through far more
-  sane means than futzing with it by hand.
-
-- Some data on whether the key should actually be pressed or released - this is
-  mostly an implementation detail of how Sequences work, where, for example,
-  `KC.RALT` may need to be held down for the entirety of a sequence, rather than
-  being released immediately before moving to the next character. Usually end
-  users shouldn't need to mess with this, but the fields are called `no_press`
-  and `no_release` and are referenced in a few places in the codebase if you
-  need examples.
+- Their `code`, which can be any integer or None. Integers sent through to the
+  HID stack (and thus the computer, which will translate that integer to
+  something meaningful - for example, `code=4` becomes `a` on a US QWERTY/Dvorak
+  keyboard).
 
 - Handlers for "press" (sometimes known as "keydown") and "release" (sometimes
   known as "keyup") events. KMK provides handlers for standard keyboard
   functions and some special override keys (like `KC.GESC`, which is an enhanced
-  form of existing ANSI keys) in [`kmk/handlers/stock.py`](/kmk/handlers/stock.py), for layer switching in
-  [`kmk/modules/layers.py`](/kmk/modules/layers.py), and for everything related to Sequences (see
-  [`sequences.md`](sequences.md) again) in [`kmk/handlers/sequences.py`](/kmk/handlers/sequences.py). We'll discuss these more
-  shortly.
-
-- Optional callbacks to be run before and/or after the above handlers. More on
-  that soon.
+  form of existing ANSI keys) in [`kmk/handlers/stock.py`](/kmk/handlers/stock.py).
 
 - A generic `meta` field, which is most commonly used for "argumented" keys -
   objects in the `KC` object which are actually functions that return `Key`
@@ -75,101 +155,20 @@ keyboard.keymap = [ ... CTRLSHFT ... ]
 ```
 
 When a key is pressed and we've pulled a `Key` object out of the keymap, the
-following will happen:
+`Key` is first passed through the module processing pipeline.
+Modules can do whatever with that `Key`, but usually keys either pass right
+through, or are intercepted and emitted again later (think of timing based
+modules like Combos and Hold-Tap).
+Finally the assigned press handler will be run (most commonly, this is provided
+by KMK).
+On release the `Key` object lookup is, most of the time, cached and doesn't
+require searching the keymap again.
+Then it's the processing pipeline again, followed by the release handler.
 
-- Pre-press callbacks will be run in the order they were assigned, with their
-  return values discarded (unless the user attached these, they will almost
-  never exist)
-- The assigned press handler will be run (most commonly, this is provided by
-  KMK)
-- Post-press callbacks will be run in the order they were assigned, with their
-  return values discarded (unless the user attached these, they will almost
-  never exist)
+Custom behavior can either be achieved with custom press and release handlers or
+with [macros](docs/en/macros.md).
 
-These same steps are run for when a key is released.
-
-_So now... what's a handler, and what's a pre/post callback?!_
-
-All of these serve roughly the same purpose: to _do something_ with the key's
-data, or to fire off side effects. Most handlers are provided by KMK internally
-and modify the `InternalState` in some way - adding the key to the HID queue,
-changing layers, etc. The pre/post handlers are designed to allow functionality
-to be bolted on at these points in the event flow without having to reimplement
-(or import and manually call) the internal handlers.
-
-All of these methods take the same arguments, and for this, I'll lift a
-docstring straight out of the source:
-
-> Receives the following:
->
-> - self (this Key instance)
-> - state (the current InternalState)
-> - KC (the global KC lookup table, for convenience)
-> - `coord_int` (an internal integer representation of the matrix coordinate
->   for the pressed key - this is likely not useful to end users, but is
->   provided for consistency with the internal handlers)
-> - `coord_raw` (an X,Y tuple of the matrix coordinate - also likely not useful)
->
-> The return value of the provided callback is discarded. Exceptions are _not_
-> caught, and will likely crash KMK if not handled within your function.
->
-> These handlers are run in attachment order: handlers provided by earlier
-> calls of this method will be executed before those provided by later calls.
-
-This means if you want to add things like underglow/LED support, or have a
-button that triggers your GSM modem to call someone, or whatever else you can
-hack up in CircuitPython, which also retaining layer-switching abilities or
-whatever the stock handler is, you're covered. This also means you can add
-completely new functionality to KMK by writing your own handler.
-
-Here's an example of an after_press_handler to change the RGB lights with a layer change:
-
-```python
-LOWER = KC.DF(LYR_LOWER) #Set layer to LOWER
-
-def low_lights(key, keyboard, *args):
-    print('Lower Layer') #serial feedback
-    keyboard.pixels.set_hsv_fill(0, 100, 255) #RGB extension call to set (H,S,V) values
-
-LOWER.after_press_handler(low_lights) #call the key with the after_press_handler
-```
-
-Here's an example of a lifecycle hook to print a giant Shrek ASCII art. It
-doesn't care about any of the arguments passed into it, because it has no
-intentions of modifying the internal state. It is purely a [side
-effect](<https://en.wikipedia.org/wiki/Side_effect_(computer_science)>) run every
-time Left Alt is pressed:
-
-```python
-def shrek(*args, **kwargs):
-    print('⢀⡴⠑⡄⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣤⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀')
-    print('⠸⡇⠀⠿⡀⠀⠀⠀⣀⡴⢿⣿⣿⣿⣿⣿⣿⣿⣷⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠑⢄⣠⠾⠁⣀⣄⡈⠙⣿⣿⣿⣿⣿⣿⣿⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⢀⡀⠁⠀⠀⠈⠙⠛⠂⠈⣿⣿⣿⣿⣿⠿⡿⢿⣆⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⢀⡾⣁⣀⠀⠴⠂⠙⣗⡀⠀⢻⣿⣿⠭⢤⣴⣦⣤⣹⠀⠀⠀⢀⢴⣶⣆')
-    print('⠀⠀⢀⣾⣿⣿⣿⣷⣮⣽⣾⣿⣥⣴⣿⣿⡿⢂⠔⢚⡿⢿⣿⣦⣴⣾⠁⠸⣼⡿')
-    print('⠀⢀⡞⠁⠙⠻⠿⠟⠉⠀⠛⢹⣿⣿⣿⣿⣿⣌⢤⣼⣿⣾⣿⡟⠉⠀⠀⠀⠀⠀')
-    print('⠀⣾⣷⣶⠇⠀⠀⣤⣄⣀⡀⠈⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀')
-    print('⠀⠉⠈⠉⠀⠀⢦⡈⢻⣿⣿⣿⣶⣶⣶⣶⣤⣽⡹⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠀⠀⠀⠉⠲⣽⡻⢿⣿⣿⣿⣿⣿⣿⣷⣜⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣷⣶⣮⣭⣽⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠀⠀⣀⣀⣈⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠀⠀⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠀⠀⠀⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀')
-    print('⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠻⠿⠿⠿⠿⠛⠉')
-
-    return False #Returning True will follow thru the normal handlers sending the ALT key to the OS
-KC.LALT.before_press_handler(shrek)
-```
-
-You can also copy a key without any pre/post handlers attached with `.clone()`,
-so for example, if I've already added Shrek to my `LALT` but want a Shrek-less
-`LALT` key elsewhere in my keymap, I can just clone it, and the new key won't
-have my handlers attached:
-
-```python
-SHREKLESS_ALT = KC.LALT.clone()
-```
+## The Key Code Dictionary
 
 You can also refer to a key by index:
 

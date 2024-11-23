@@ -155,31 +155,6 @@
 |`KC.RIGHT_ANGLE_BRACKET`|`KC.RABK`          |`>`                |
 |`KC.QUESTION`           |`KC.QUES`          |`?`                |
 
-## [International Keys]
-
-|Key                     |Aliases                       |Description            |
-|------------------------|------------------------------|-----------------------|
-|`KC.NONUS_HASH`         |`KC.NUHS`                     |ISO Left of Return     |
-|`KC.NONUS_BSLASH`       |`KC.NUBS`                     |ISO Right of LSHIFT    |
-|`KC.APPLICATION`        |`KC.APP`,`KC.SEL`,`KC.WINMENU`|Menu Key (Near RCTRL)  |
-|`KC.INT1`               |`KC.RO`                       |                       |
-|`KC.INT2`               |`KC.KANA`                     |                       |
-|`KC.INT3`               |`KC.JYEN`                     |                       |
-|`KC.INT4`               |`KC.HENK`                     |                       |
-|`KC.INT5`               |`KC.MHEN`                     |                       |
-|`KC.INT6`               |                              |                       |
-|`KC.INT7`               |                              |                       |
-|`KC.INT8`               |                              |                       |
-|`KC.INT9`               |                              |                       |
-|`KC.LANG1`              |`HAEN`                        |                       |
-|`KC.LANG2`              |`HAEJ`                        |                       |
-|`KC.LANG3`              |                              |                       |
-|`KC.LANG4`              |                              |                       |
-|`KC.LANG5`              |                              |                       |
-|`KC.LANG6`              |                              |                       |
-|`KC.LANG7`              |                              |                       |
-|`KC.LANG8`              |                              |                       |
-|`KC.LANG9`              |                              |                       |
 
 ## [Internal Keys]
 
@@ -187,15 +162,10 @@
 |-------------------------|------------------------------------------------------------------------|
 | `KC.RESET`              | Restarts the keyboard                                                  |
 | `KC.RELOAD`, `KC.RLD`   | Reloads the keyboard software, preserving any serial connections       |
-| `KC.DEBUG`              | Toggle `debug_enabled`, which enables log spew to serial console       |
+| `KC.DEBUG`              | Toggle `debug.enabled`, which enables log spew to serial console       |
 | `KC.ANY`                | Any key between `A` and `/`                                            |
 | `KC.GESC`               | Escape when tapped, <code>&#96;</code> when pressed with Shift or GUI  |
 | `KC.BKDL`               | Backspace when tapped, Delete when pressed with GUI                    |
-| `KC.UC_MODE_NOOP`       | Sets UnicodeMode to NOOP                                               |
-| `KC.UC_MODE_LINUX`      | Sets UnicodeMode to Linux                                              |
-| `KC.UC_MODE_MACOS`      | Sets UnicodeMode to macOS                                              |
-| `KC.UC_MODE_WINC`       | Sets UnicodeMode to WinCompose                                         |
-| `KC.MACRO_SLEEP_MS(ms)` | Sleeps in a macro. See [SEQUENCES](sequences.md) for more information. |
 
 
 ## [Modifiers]
@@ -222,6 +192,8 @@
 |`KC.BT_NEXT_CONN`            |`KC.BT_NXT`        |Selects the next BT connection    |
 |`KC.BT_PREV_CONN`            |`KC.BT_PRV`        |Selects the previous BT connection|
 
+## [International Keys]
+See [International extension](international.md).
 
 ## [Media Keys]
 See [MediaKeys extension](media_keys.md).

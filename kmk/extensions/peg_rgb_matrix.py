@@ -3,8 +3,10 @@ import neopixel
 from storage import getmount
 
 from kmk.extensions import Extension
-from kmk.handlers.stock import passthrough as handler_passthrough
 from kmk.keys import make_key
+from kmk.utils import Debug
+
+debug = Debug(__name__)
 
 
 class Color:
@@ -27,10 +29,12 @@ class Color:
 class Rgb_matrix_data:
     def __init__(self, keys=[], underglow=[]):
         if len(keys) == 0:
-            print('No colors passed for your keys')
+            if debug.enabled:
+                debug('No colors passed for your keys')
             return
         if len(underglow) == 0:
-            print('No colors passed for your underglow')
+            if debug.enabled:
+                debug('No colors passed for your underglow')
             return
         self.data = keys + underglow
 
@@ -40,7 +44,8 @@ class Rgb_matrix_data:
     ):
         keys = [key_color] * number_of_keys
         underglow = [underglow_color] * number_of_underglow
-        print(f'Rgb_matrix_data(keys={keys},\nunderglow={underglow})')
+        if debug.enabled:
+            debug('Rgb_matrix_data(keys=', keys, ', nunderglow=', underglow, ')')
 
 
 class Rgb_matrix(Extension):
@@ -69,15 +74,9 @@ class Rgb_matrix(Extension):
         else:
             self.ledDisplay = ledDisplay
 
-        make_key(
-            names=('RGB_TOG',), on_press=self._rgb_tog, on_release=handler_passthrough
-        )
-        make_key(
-            names=('RGB_BRI',), on_press=self._rgb_bri, on_release=handler_passthrough
-        )
-        make_key(
-            names=('RGB_BRD',), on_press=self._rgb_brd, on_release=handler_passthrough
-        )
+        make_key(names=('RGB_TOG',), on_press=self._rgb_tog)
+        make_key(names=('RGB_BRI',), on_press=self._rgb_bri)
+        make_key(names=('RGB_BRD',), on_press=self._rgb_brd)
 
     def _rgb_tog(self, *args, **kwargs):
         if self.enable:

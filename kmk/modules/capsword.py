@@ -1,4 +1,4 @@
-from kmk.keys import FIRST_KMK_INTERNAL_KEY, KC, ModifierKey, make_key
+from kmk.keys import KC, KeyboardKey, ModifierKey, make_key
 from kmk.modules import Module
 
 
@@ -31,27 +31,30 @@ class CapsWord(Module):
         return
 
     def process_key(self, keyboard, key, is_pressed, int_coord):
-        if self._cw_active and key != KC.CW:
-            continue_cw = False
-            # capitalize alphabets
-            if key.code in self._alphabets:
-                continue_cw = True
-                keyboard.process_key(KC.LSFT, is_pressed)
-            elif (
-                key.code in self._numbers
-                or isinstance(key, ModifierKey)
-                or key in self.keys_ignored
-                or key.code
-                >= FIRST_KMK_INTERNAL_KEY  # user defined keys are also ignored
-            ):
-                continue_cw = True
-            # requests and cancels existing timeouts
-            if is_pressed:
-                if continue_cw:
-                    self.discard_timeout(keyboard)
-                    self.request_timeout(keyboard)
-                else:
-                    self.process_timeout()
+        if not self._cw_active or key == KC.CW:
+            return key
+
+        continue_cw = False
+
+        # capitalize alphabets
+        if isinstance(key, KeyboardKey) and key.code in self._alphabets:
+            keyboard.process_key(KC.LSFT, is_pressed)
+            continue_cw = True
+        elif (
+            not isinstance(key, KeyboardKey)
+            or isinstance(key, ModifierKey)
+            or key.code in self._numbers
+            or key in self.keys_ignored
+        ):
+            continue_cw = True
+
+        # requests and cancels existing timeouts
+        if is_pressed:
+            if continue_cw:
+                self.discard_timeout(keyboard)
+                self.request_timeout(keyboard)
+            else:
+                self.process_timeout()
 
         return key
 

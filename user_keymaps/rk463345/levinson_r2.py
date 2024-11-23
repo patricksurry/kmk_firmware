@@ -2,7 +2,6 @@ from kb import KMKKeyboard
 
 from kmk.consts import UnicodeMode
 from kmk.extensions.rgb import RGB
-from kmk.handlers.sequences import compile_unicode_string_sequences
 from kmk.keys import KC
 from kmk.modules.layers import Layers
 from kmk.modules.media_keys import MediaKeys
@@ -12,7 +11,14 @@ keyboard = KMKKeyboard()
 layers = Layers()
 media_keys = MediaKeys()
 split = Split(split_type=SplitType.UART)
-rgb = RGB(pixel_pin=keyboard.rgb_pixel_pin, num_pixels=16, val_limit=150, hue_default=0, sat_default=100, val_default=20)
+rgb = RGB(
+    pixel_pin=keyboard.rgb_pixel_pin,
+    num_pixels=16,
+    val_limit=150,
+    hue_default=0,
+    sat_default=100,
+    val_default=20,
+)
 keyboard.modules = [layers, media_keys, split]
 keyboard.extensions = [rgb]
 
@@ -29,7 +35,7 @@ _______ = KC.TRNS
 XXXXXXX = KC.NO
 
 # ---------------------- Keymap ---------------------------------------------------------
-
+# fmt:off
 keyboard.keymap = [
     [
         # Default
@@ -68,6 +74,7 @@ keyboard.keymap = [
         KC.DF(0),            KC.DF(1), KC.DF(2), _______, _______, _______, _______, _______, KC.HOME, KC.VOLD, KC.VOLU, KC.END,
     ],
 ]
+# fmt:on
 
 if __name__ == '__main__':
     keyboard.go()

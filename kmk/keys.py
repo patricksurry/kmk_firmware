@@ -3,28 +3,13 @@ try:
 except ImportError:
     pass
 
-from micropython import const
-
 import kmk.handlers.stock as handlers
-from kmk.consts import UnicodeMode
-from kmk.key_validators import key_seq_sleep_validator, unicode_mode_key_validator
-from kmk.types import UnicodeModeKeyMeta
 from kmk.utils import Debug
 
 # Type aliases / forward declaration; can't use the proper types because of circular imports.
 Keyboard = object
 Key = object
 
-
-class KeyType:
-    SIMPLE = const(0)
-    MODIFIER = const(1)
-    CONSUMER = const(2)
-    MOUSE = const(3)
-
-
-FIRST_KMK_INTERNAL_KEY = const(1000)
-NEXT_AVAILABLE_KEY = 1000
 
 ALL_ALPHAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 ALL_NUMBERS = '1234567890'
@@ -59,28 +44,28 @@ class AX:
 
 
 def maybe_make_key(
-    code: Optional[int],
     names: Tuple[str, ...],
     *args,
     **kwargs,
 ) -> Callable[[str], Key]:
     def closure(candidate):
         if candidate in names:
-            return make_key(code=code, names=names, *args, **kwargs)
+            return make_key(names=names, *args, **kwargs)
 
     return closure
 
 
 def maybe_make_argumented_key(
-    validator=lambda *validator_args, **validator_kwargs: object(),
-    names: Tuple[str, ...] = tuple(),  # NOQA
-    *constructor_args,
-    **constructor_kwargs,
+    names: Tuple[str, ...],
+    constructor: [Key, Callable[[...], Key]],
+    **kwargs,
 ) -> Callable[[str], Key]:
     def closure(candidate):
         if candidate in names:
             return make_argumented_key(
-                validator, names, *constructor_args, **constructor_kwargs
+                names=names,
+                constructor=constructor,
+                **kwargs,
             )
 
     return closure
@@ -111,8 +96,9 @@ def maybe_make_alpha_key(candidate: str) -> Optional[Key]:
     candidate_upper = candidate.upper()
     if candidate_upper in ALL_ALPHAS:
         return make_key(
-            code=4 + ALL_ALPHAS.index(candidate_upper),
             names=(candidate_upper, candidate.lower()),
+            constructor=KeyboardKey,
+            code=4 + ALL_ALPHAS.index(candidate_upper),
         )
 
 
@@ -124,8 +110,9 @@ def maybe_make_numeric_key(candidate: str) -> Optional[Key]:
             offset = ALL_NUMBER_ALIASES.index(candidate)
 
         return make_key(
-            code=30 + offset,
             names=(ALL_NUMBERS[offset], ALL_NUMBER_ALIASES[offset]),
+            constructor=KeyboardKey,
+            code=30 + offset,
         )
 
 
@@ -147,7 +134,7 @@ def maybe_make_mod_key(candidate: str) -> Optional[Key]:
 
     for code, names in mods:
         if candidate in names:
-            return make_key(code=code, names=names, type=KeyType.MODIFIER)
+            return make_key(names=names, constructor=ModifierKey, code=code)
 
 
 def maybe_make_more_ascii(candidate: str) -> Optional[Key]:
@@ -172,7 +159,7 @@ def maybe_make_more_ascii(candidate: str) -> Optional[Key]:
 
     for code, names in codes:
         if candidate in names:
-            return make_key(code=code, names=names)
+            return make_key(names=names, constructor=KeyboardKey, code=code)
 
 
 def maybe_make_fn_key(candidate: str) -> Optional[Key]:
@@ -205,7 +192,7 @@ def maybe_make_fn_key(candidate: str) -> Optional[Key]:
 
     for code, names in codes:
         if candidate in names:
-            return make_key(code=code, names=names)
+            return make_key(names=names, constructor=KeyboardKey, code=code)
 
 
 def maybe_make_navlock_key(candidate: str) -> Optional[Key]:
@@ -234,7 +221,7 @@ def maybe_make_navlock_key(candidate: str) -> Optional[Key]:
 
     for code, names in codes:
         if candidate in names:
-            return make_key(code=code, names=names)
+            return make_key(names=names, constructor=KeyboardKey, code=code)
 
 
 def maybe_make_numpad_key(candidate: str) -> Optional[Key]:
@@ -263,7 +250,7 @@ def maybe_make_numpad_key(candidate: str) -> Optional[Key]:
 
     for code, names in codes:
         if candidate in names:
-            return make_key(code=code, names=names)
+            return make_key(names=names, constructor=KeyboardKey, code=code)
 
 
 def maybe_make_shifted_key(candidate: str) -> Optional[Key]:
@@ -293,73 +280,9 @@ def maybe_make_shifted_key(candidate: str) -> Optional[Key]:
 
     for code, names in codes:
         if candidate in names:
-            return make_key(code=code, names=names, has_modifiers={KC.LSFT.code})
-
-
-def maybe_make_international_key(candidate: str) -> Optional[Key]:
-    codes = (
-        (50, ('NONUS_HASH', 'NUHS')),
-        (100, ('NONUS_BSLASH', 'NUBS')),
-        (101, ('APP', 'APPLICATION', 'SEL', 'WINMENU')),
-        (135, ('INT1', 'RO')),
-        (136, ('INT2', 'KANA')),
-        (137, ('INT3', 'JYEN')),
-        (138, ('INT4', 'HENK')),
-        (139, ('INT5', 'MHEN')),
-        (140, ('INT6',)),
-        (141, ('INT7',)),
-        (142, ('INT8',)),
-        (143, ('INT9',)),
-        (144, ('LANG1', 'HAEN')),
-        (145, ('LANG2', 'HAEJ')),
-        (146, ('LANG3',)),
-        (147, ('LANG4',)),
-        (148, ('LANG5',)),
-        (149, ('LANG6',)),
-        (150, ('LANG7',)),
-        (151, ('LANG8',)),
-        (152, ('LANG9',)),
-    )
-
-    for code, names in codes:
-        if candidate in names:
-            return make_key(code=code, names=names)
-
-
-def maybe_make_unicode_key(candidate: str) -> Optional[Key]:
-    keys = (
-        (
-            ('UC_MODE_NOOP', 'UC_DISABLE'),
-            handlers.uc_mode_pressed,
-            UnicodeModeKeyMeta(UnicodeMode.NOOP),
-        ),
-        (
-            ('UC_MODE_LINUX', 'UC_MODE_IBUS'),
-            handlers.uc_mode_pressed,
-            UnicodeModeKeyMeta(UnicodeMode.IBUS),
-        ),
-        (
-            ('UC_MODE_MACOS', 'UC_MODE_OSX', 'US_MODE_RALT'),
-            handlers.uc_mode_pressed,
-            UnicodeModeKeyMeta(UnicodeMode.RALT),
-        ),
-        (
-            ('UC_MODE_WINC',),
-            handlers.uc_mode_pressed,
-            UnicodeModeKeyMeta(UnicodeMode.WINC),
-        ),
-    )
-
-    for names, handler, meta in keys:
-        if candidate in names:
-            return make_key(names=names, on_press=handler, meta=meta)
-
-    if candidate in ('UC_MODE',):
-        return make_argumented_key(
-            names=('UC_MODE',),
-            validator=unicode_mode_key_validator,
-            on_press=handlers.uc_mode_pressed,
-        )
+            return make_key(
+                names=names, constructor=ModifiedKey, code=code, modifier=KC.LSFT
+            )
 
 
 def maybe_make_firmware_key(candidate: str) -> Optional[Key]:
@@ -367,7 +290,6 @@ def maybe_make_firmware_key(candidate: str) -> Optional[Key]:
         ((('BLE_REFRESH',), handlers.ble_refresh)),
         ((('BLE_DISCONNECT',), handlers.ble_disconnect)),
         ((('BOOTLOADER',), handlers.bootloader)),
-        ((('DEBUG', 'DBG'), handlers.debug_pressed)),
         ((('HID_SWITCH', 'HID'), handlers.hid_switch)),
         ((('RELOAD', 'RLD'), handlers.reload)),
         ((('RESET',), handlers.reset)),
@@ -385,23 +307,14 @@ KEY_GENERATORS = (
     maybe_make_numeric_key,
     maybe_make_firmware_key,
     maybe_make_key(
-        None,
         ('BKDL',),
         on_press=handlers.bkdl_pressed,
         on_release=handlers.bkdl_released,
     ),
     maybe_make_key(
-        None,
         ('GESC', 'GRAVE_ESC'),
         on_press=handlers.gesc_pressed,
         on_release=handlers.gesc_released,
-    ),
-    # A dummy key to trigger a sleep_ms call in a sequence of other keys in a
-    # simple sequence macro.
-    maybe_make_argumented_key(
-        key_seq_sleep_validator,
-        ('MACRO_SLEEP_MS', 'SLEEP_IN_SEQ'),
-        on_press=handlers.sleep_pressed,
     ),
     maybe_make_mod_key,
     # More ASCII standard keys
@@ -420,9 +333,6 @@ KEY_GENERATORS = (
     # sending Shift+(whatever key is normally pressed) to get these, so
     # for example `KC_AT` will hold shift and press 2.
     maybe_make_shifted_key,
-    # International
-    maybe_make_international_key,
-    maybe_make_unicode_key,
 )
 
 
@@ -478,11 +388,8 @@ class KeyAttrDict:
 
         if not maybe_key:
             if debug.enabled:
-                debug(f'Invalid key: {name}')
+                debug('Invalid key: ', name)
             return KC.NO
-
-        if debug.enabled:
-            debug(f'{name}: {maybe_key}')
 
         return maybe_key
 
@@ -493,246 +400,114 @@ KC = KeyAttrDict()
 
 
 class Key:
+    '''Generic Key class with assignable handlers.'''
+
     def __init__(
         self,
-        code: int,
-        has_modifiers: Optional[list[Key, ...]] = None,
-        no_press: bool = False,
-        no_release: bool = False,
-        on_press: Callable[
-            [object, Key, Keyboard, ...], None
-        ] = handlers.default_pressed,
-        on_release: Callable[
-            [object, Key, Keyboard, ...], None
-        ] = handlers.default_released,
-        meta: object = object(),
+        on_press: Callable[[object, Key, Keyboard, ...], None] = handlers.passthrough,
+        on_release: Callable[[object, Key, Keyboard, ...], None] = handlers.passthrough,
     ):
-        self.code = code
-        self.has_modifiers = has_modifiers
-        # cast to bool() in case we get a None value
-        self.no_press = bool(no_press)
-        self.no_release = bool(no_release)
-
-        self._handle_press = on_press
-        self._handle_release = on_release
-        self.meta = meta
-
-    def __call__(
-        self, no_press: Optional[bool] = None, no_release: Optional[bool] = None
-    ) -> Key:
-        if no_press is None and no_release is None:
-            return self
-
-        return type(self)(
-            code=self.code,
-            has_modifiers=self.has_modifiers,
-            no_press=no_press,
-            no_release=no_release,
-            on_press=self._handle_press,
-            on_release=self._handle_release,
-            meta=self.meta,
-        )
+        self._on_press = on_press
+        self._on_release = on_release
 
     def __repr__(self):
-        return f'Key(code={self.code}, has_modifiers={self.has_modifiers})'
+        return self.__class__.__name__
 
     def on_press(self, keyboard: Keyboard, coord_int: Optional[int] = None) -> None:
-        if hasattr(self, '_pre_press_handlers'):
-            for fn in self._pre_press_handlers:
-                if not fn(self, keyboard, KC, coord_int):
-                    return
-
-        self._handle_press(self, keyboard, KC, coord_int)
-
-        if hasattr(self, '_post_press_handlers'):
-            for fn in self._post_press_handlers:
-                fn(self, keyboard, KC, coord_int)
+        self._on_press(self, keyboard, KC, coord_int)
 
     def on_release(self, keyboard: Keyboard, coord_int: Optional[int] = None) -> None:
-        if hasattr(self, '_pre_release_handlers'):
-            for fn in self._pre_release_handlers:
-                if not fn(self, keyboard, KC, coord_int):
-                    return
-
-        self._handle_release(self, keyboard, KC, coord_int)
-
-        if hasattr(self, '_post_release_handlers'):
-            for fn in self._post_release_handlers:
-                fn(self, keyboard, KC, coord_int)
-
-    def clone(self) -> Key:
-        '''
-        Return a shallow clone of the current key without any pre/post press/release
-        handlers attached. Almost exclusively useful for creating non-colliding keys
-        to use such handlers.
-        '''
-
-        return type(self)(
-            code=self.code,
-            has_modifiers=self.has_modifiers,
-            no_press=self.no_press,
-            no_release=self.no_release,
-            on_press=self._handle_press,
-            on_release=self._handle_release,
-            meta=self.meta,
-        )
-
-    def before_press_handler(self, fn: Callable[[Key, Keyboard, ...], bool]) -> None:
-        '''
-        Attach a callback to be run prior to the on_press handler for this key.
-        Receives the following:
-
-        - self (this Key instance)
-        - state (the current InternalState)
-        - KC (the global KC lookup table, for convenience)
-        - coord_int (an internal integer representation of the matrix coordinate
-          for the pressed key - this is likely not useful to end users, but is
-          provided for consistency with the internal handlers)
-
-        If return value of the provided callback is evaluated to False, press
-        processing is cancelled. Exceptions are _not_ caught, and will likely
-        crash KMK if not handled within your function.
-
-        These handlers are run in attachment order: handlers provided by earlier
-        calls of this method will be executed before those provided by later calls.
-        '''
-
-        if not hasattr(self, '_pre_press_handlers'):
-            self._pre_press_handlers = []
-        self._pre_press_handlers.append(fn)
-
-    def after_press_handler(self, fn: Callable[[Key, Keyboard, ...], bool]) -> None:
-        '''
-        Attach a callback to be run after the on_release handler for this key.
-        Receives the following:
-
-        - self (this Key instance)
-        - state (the current InternalState)
-        - KC (the global KC lookup table, for convenience)
-        - coord_int (an internal integer representation of the matrix coordinate
-          for the pressed key - this is likely not useful to end users, but is
-          provided for consistency with the internal handlers)
-
-        The return value of the provided callback is discarded. Exceptions are _not_
-        caught, and will likely crash KMK if not handled within your function.
-
-        These handlers are run in attachment order: handlers provided by earlier
-        calls of this method will be executed before those provided by later calls.
-        '''
-
-        if not hasattr(self, '_post_press_handlers'):
-            self._post_press_handlers = []
-        self._post_press_handlers.append(fn)
-
-    def before_release_handler(self, fn: Callable[[Key, Keyboard, ...], bool]) -> None:
-        '''
-        Attach a callback to be run prior to the on_release handler for this
-        key. Receives the following:
-
-        - self (this Key instance)
-        - state (the current InternalState)
-        - KC (the global KC lookup table, for convenience)
-        - coord_int (an internal integer representation of the matrix coordinate
-          for the pressed key - this is likely not useful to end users, but is
-          provided for consistency with the internal handlers)
-
-        If return value of the provided callback evaluates to False, the release
-        processing is cancelled. Exceptions are _not_ caught, and will likely crash
-        KMK if not handled within your function.
-
-        These handlers are run in attachment order: handlers provided by earlier
-        calls of this method will be executed before those provided by later calls.
-        '''
-
-        if not hasattr(self, '_pre_release_handlers'):
-            self._pre_release_handlers = []
-        self._pre_release_handlers.append(fn)
-
-    def after_release_handler(self, fn: Callable[[Key, Keyboard, ...], bool]) -> None:
-        '''
-        Attach a callback to be run after the on_release handler for this key.
-        Receives the following:
-
-        - self (this Key instance)
-        - state (the current InternalState)
-        - KC (the global KC lookup table, for convenience)
-        - coord_int (an internal integer representation of the matrix coordinate
-          for the pressed key - this is likely not useful to end users, but is
-          provided for consistency with the internal handlers)
-
-        The return value of the provided callback is discarded. Exceptions are _not_
-        caught, and will likely crash KMK if not handled within your function.
-
-        These handlers are run in attachment order: handlers provided by earlier
-        calls of this method will be executed before those provided by later calls.
-        '''
-
-        if not hasattr(self, '_post_release_handlers'):
-            self._post_release_handlers = []
-        self._post_release_handlers.append(fn)
+        self._on_release(self, keyboard, KC, coord_int)
 
 
-class ModifierKey(Key):
-    FAKE_CODE = const(-1)
+class _DefaultKey(Key):
+    '''Meta class implementing handlers for Keys with HID codes.'''
 
-    def __call__(
-        self,
-        modified_key: Optional[Key] = None,
-        no_press: Optional[bool] = None,
-        no_release: Optional[bool] = None,
-    ) -> Key:
-        if modified_key is None:
-            return super().__call__(no_press=no_press, no_release=no_release)
-
-        modifiers = set()
-        code = modified_key.code
-
-        if self.code != ModifierKey.FAKE_CODE:
-            modifiers.add(self.code)
-        if self.has_modifiers:
-            modifiers |= self.has_modifiers
-        if modified_key.has_modifiers:
-            modifiers |= modified_key.has_modifiers
-
-        if isinstance(modified_key, ModifierKey):
-            if modified_key.code != ModifierKey.FAKE_CODE:
-                modifiers.add(modified_key.code)
-            code = ModifierKey.FAKE_CODE
-
-        return type(modified_key)(
-            code=code,
-            has_modifiers=modifiers,
-            no_press=no_press,
-            no_release=no_release,
-            on_press=modified_key._handle_press,
-            on_release=modified_key._handle_release,
-            meta=modified_key.meta,
-        )
+    def __init__(self, code: Optional[int] = None):
+        self.code = code
 
     def __repr__(self):
-        return f'ModifierKey(code={self.code}, has_modifiers={self.has_modifiers})'
+        return super().__repr__() + '(code=' + str(self.code) + ')'
+
+    def on_press(self, keyboard: Keyboard, coord_int: Optional[int] = None) -> None:
+        keyboard.hid_pending = True
+        keyboard.keys_pressed.add(self)
+
+    def on_release(self, keyboard: Keyboard, coord_int: Optional[int] = None) -> None:
+        keyboard.hid_pending = True
+        keyboard.keys_pressed.discard(self)
 
 
-class ConsumerKey(Key):
+class KeyboardKey(_DefaultKey):
     pass
 
 
-class MouseKey(Key):
+class ModifierKey(_DefaultKey):
+    def __call__(self, key: Key) -> Key:
+        # don't duplicate when applying the same modifier twice
+        if (
+            isinstance(key, ModifiedKey)
+            and key.modifier.code & self.code == key.modifier.code
+        ):
+            return key
+        elif isinstance(key, ModifierKey) and key.code & self.code == key.code:
+            return key
+
+        return ModifiedKey(key, self)
+
+
+class ModifiedKey(Key):
+    code = -1
+
+    def __init__(self, code: [Key, int], modifier: [ModifierKey]):
+        # generate from code by maybe_make_shifted_key
+        if isinstance(code, int):
+            key = KeyboardKey(code=code)
+        else:
+            key = code
+
+        # stack modified keys
+        if isinstance(key, ModifiedKey):
+            modifier = ModifierKey(key.modifier.code | modifier.code)
+            key = key.key
+
+        self.key = key
+        self.modifier = modifier
+
+    def on_press(self, keyboard: Keyboard, coord_int: Optional[int] = None) -> None:
+        self.modifier.on_press(keyboard, coord_int)
+        self.key.on_press(keyboard, coord_int)
+
+    def on_release(self, keyboard: Keyboard, coord_int: Optional[int] = None) -> None:
+        self.key.on_release(keyboard, coord_int)
+        self.modifier.on_release(keyboard, coord_int)
+
+    def __repr__(self):
+        return (
+            super().__repr__()
+            + '(key='
+            + str(self.key)
+            + ', modifier='
+            + str(self.modifier)
+            + ')'
+        )
+
+
+class ConsumerKey(_DefaultKey):
+    pass
+
+
+class MouseKey(_DefaultKey):
     pass
 
 
 def make_key(
-    code: Optional[int] = None,
-    names: Tuple[str, ...] = tuple(),  # NOQA
-    type: KeyType = KeyType.SIMPLE,
+    names: Tuple[str, ...],
+    constructor: Key = Key,
     **kwargs,
 ) -> Key:
     '''
     Create a new key, aliased by `names` in the KC lookup table.
-
-    If a code is not specified, the key is assumed to be a custom
-    internal key to be handled in a state callback rather than
-    sent directly to the OS. These codes will autoincrement.
 
     Names are globally unique. If a later key is created with
     the same name as an existing entry in `KC`, it will overwrite
@@ -743,29 +518,7 @@ def make_key(
     All **kwargs are passed to the Key constructor
     '''
 
-    global NEXT_AVAILABLE_KEY
-
-    if type == KeyType.SIMPLE:
-        constructor = Key
-    elif type == KeyType.MODIFIER:
-        constructor = ModifierKey
-    elif type == KeyType.CONSUMER:
-        constructor = ConsumerKey
-    elif type == KeyType.MOUSE:
-        constructor = MouseKey
-    else:
-        raise ValueError('Unrecognized key type')
-
-    if code is None:
-        code = NEXT_AVAILABLE_KEY
-        NEXT_AVAILABLE_KEY += 1
-    elif code >= FIRST_KMK_INTERNAL_KEY:
-        # Try to ensure future auto-generated internal keycodes won't
-        # be overridden by continuing to +1 the sequence from the provided
-        # code
-        NEXT_AVAILABLE_KEY = max(NEXT_AVAILABLE_KEY, code + 1)
-
-    key = constructor(code=code, **kwargs)
+    key = constructor(**kwargs)
 
     for name in names:
         KC[name] = key
@@ -773,54 +526,23 @@ def make_key(
     return key
 
 
-def make_mod_key(code: int, names: Tuple[str, ...], *args, **kwargs) -> Key:
-    return make_key(code, names, *args, **kwargs, type=KeyType.MODIFIER)
-
-
-def make_shifted_key(code: int, names: Tuple[str, ...]) -> Key:
-    return make_key(code, names, has_modifiers={KC.LSFT.code})
-
-
-def make_consumer_key(*args, **kwargs) -> Key:
-    return make_key(*args, **kwargs, type=KeyType.CONSUMER)
-
-
-def make_mouse_key(*args, **kwargs) -> Key:
-    return make_key(*args, **kwargs, type=KeyType.MOUSE)
-
-
 # Argumented keys are implicitly internal, so auto-gen of code
 # is almost certainly the best plan here
 def make_argumented_key(
-    validator: object = lambda *validator_args, **validator_kwargs: object(),
-    names: Tuple[str, ...] = tuple(),  # NOQA
-    *constructor_args,
-    **constructor_kwargs,
+    names: Tuple[str, ...],
+    constructor: [Key, Callable[[...], Key]],
+    **_kwargs,
 ) -> Key:
-    global NEXT_AVAILABLE_KEY
 
-    def _argumented_key(*user_args, **user_kwargs) -> Key:
-        global NEXT_AVAILABLE_KEY
-
-        meta = validator(*user_args, **user_kwargs)
-
-        if meta:
-            key = Key(
-                NEXT_AVAILABLE_KEY, *constructor_args, meta=meta, **constructor_kwargs
-            )
-
-            NEXT_AVAILABLE_KEY += 1
-
-            return key
-
-        else:
-            raise ValueError(
-                'Argumented key validator failed for unknown reasons. '
-                "This may not be the keymap's fault, as a more specific error "
-                'should have been raised.'
-            )
+    def argumented_key(*args, **kwargs) -> Key:
+        # This is a very ugly workaround for missing syntax in mpy-cross 8.x
+        # and, once EOL, can be replaced by:
+        # return constructor(*args, **_kwargs, **kwargs)
+        k = _kwargs.copy()
+        k.update(**kwargs)
+        return constructor(*args, **k)
 
     for name in names:
-        KC[name] = _argumented_key
+        KC[name] = argumented_key
 
-    return _argumented_key
+    return argumented_key

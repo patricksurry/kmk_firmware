@@ -1,11 +1,9 @@
+import board
+
 from kb import KMKKeyboard
 
-from kmk.extensions.peg_oled_display import (
-    Oled,
-    OledData,
-    OledDisplayMode,
-    OledReactionType,
-)
+from kmk.extensions.display import Display, TextEntry
+from kmk.extensions.display.ssd1306 import SSD1306
 from kmk.extensions.peg_rgb_matrix import Rgb_matrix
 from kmk.keys import KC
 from kmk.modules.layers import Layers
@@ -14,30 +12,16 @@ from kmk.modules.split import Split
 keyboard = KMKKeyboard()
 keyboard.debug_enable = True
 keyboard.modules.append(Layers())
+
 # oled
-oled = Oled(
-    OledData(
-        corner_one={
-            0: OledReactionType.STATIC,
-            1: ['1 2 3 4 5 6', '', '', '', '', '', '', ''],
-        },
-        corner_two={
-            0: OledReactionType.STATIC,
-            1: [' 7 8 Layer', '', '', '', '', '', '', ' 7 8 Layer'],
-        },
-        corner_three={
-            0: OledReactionType.LAYER,
-            1: ['^', '  ^', '    ^', '      ^', '        ^', '          ^', '', ''],
-        },
-        corner_four={
-            0: OledReactionType.LAYER,
-            1: ['', '', '', '', '', '', ' ^', '   ^'],
-        },
-    ),
-    toDisplay=OledDisplayMode.TXT,
+display = Display(
+    display=SSD1306(sda=board.D4, scl=board.D5),
+    entries=[TextEntry(text='Layer: ', x=0, y=32, y_anchor='B')]
+    + [TextEntry(text=str(_), x=40, y=32, layer=_) for _ in range(9)],
     flip=True,
 )
-keyboard.extensions.append(oled)
+keyboard.extensions.append(display)
+
 # ledmap
 rgb = Rgb_matrix(
     ledDisplay=[
@@ -76,6 +60,7 @@ XXXXXXX = KC.NO
 LOWER = KC.MO(2)
 RAISE = KC.MO(1)
 
+# fmt:off
 keyboard.keymap = [
     [  #QWERTY
         KC.Q,    KC.W,    KC.E,    KC.R,    KC.T,                           KC.Y,    KC.U,    KC.I,    KC.O,    KC.P,
@@ -96,6 +81,7 @@ keyboard.keymap = [
                                    XXXXXXX, XXXXXXX, XXXXXXX,       KC.ENT, XXXXXXX, KC.DEL,
     ],
 ]
+# fmt:on
 
 if __name__ == '__main__':
     keyboard.go()

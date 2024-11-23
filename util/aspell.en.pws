@@ -1,4 +1,4 @@
-personal_ws-1.1 en 354
+personal_ws-1.1 en 357
 ADNS
 AMS
 ANAVI
@@ -33,6 +33,7 @@ Crkbd
 Crowboard
 Ctrl
 Cygwin
+debounce
 DFU
 DISCOVERABLE
 DIY
@@ -69,6 +70,7 @@ Hanja
 Hankaku
 Henkan
 HoldTap
+IBus
 InternalState
 ItsyBitsy
 JIS
@@ -332,6 +334,8 @@ rp
 runtime
 scotto
 splitkb
+stateful
+StickyKeys
 sublicensable
 sublicenses
 subrezon

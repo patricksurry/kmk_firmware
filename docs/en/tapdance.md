@@ -24,7 +24,7 @@ KC.SOMETHING_ELSE, MAYBE_THIS_IS_A_MACRO, WHATEVER_YO)`, and place it in your
 keymap somewhere. The only limits on how many keys can go in the sequence are,
 theoretically, the amount of RAM your MCU/board has.
 
-Tap dance supports all `HoldTap` based keys, like mod tap, layer tap, oneshot...
+Tap dance supports all `HoldTap` based keys, like mod tap, layer tap...
 it will even honor every option set for those keys.
 Individual timeouts and prefer hold behavior for every tap in the sequence?
 Not a problem.
@@ -33,7 +33,7 @@ Here's an example of all this in action:
 
 ```python
 from kmk.keycodes import KC
-from kmk.handlers.sequences import send_string
+from kmk.modules.macros import Macros
 from kmk.modules.tapdance import TapDance
 
 keyboard = KMKKeyboard()
@@ -41,6 +41,7 @@ keyboard = KMKKeyboard()
 tapdance = TapDance()
 tapdance.tap_time = 750
 keyboard.modules.append(tapdance)
+keyboard.modules.append(Macros())
 
 EXAMPLE_TD = KC.TD(
     # Tap once for "a"
@@ -48,7 +49,7 @@ EXAMPLE_TD = KC.TD(
     # Tap twice for "b", or tap and hold for "left control"
     KC.HT(KC.B, KC.LCTL, prefer_hold=False),
     # Tap three times to send a raw string via macro
-    send_string('macros in a tap dance? I think yes'),
+    KC.MACRO('macros in a tap dance? I think yes'),
     # Tap four times to toggle layer index 1, tap 3 times and hold for 3s to
     # momentary toggle layer index 1.
     KC.TT(1, tap_time=3000),

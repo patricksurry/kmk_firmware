@@ -1,6 +1,6 @@
 import unittest
 
-from kmk.keys import KC, Key, ModifierKey, make_key
+from kmk.keys import KC, Key, KeyboardKey, ModifiedKey, ModifierKey, make_key
 from tests.keyboard_test import KeyboardTest
 
 
@@ -14,13 +14,13 @@ class TestKmkKeys(unittest.TestCase):
                     KC.RALT(KC.HASH),
                     KC.RALT(KC.LSFT(KC.N3)),
                     KC.RALT(KC.LSFT),
-                    # Note: this is correct, if unusual, syntax. It's a useful test because it failed silently on previous builds.
-                    KC.RALT(KC.LSFT)(KC.N3),
                     KC.RALT,
                     KC.TRNS,
                 ]
             ],
+            debug_enabled=False,
         )
+
         keyboard.test(
             'Shifted key',
             [(0, True), (0, False)],
@@ -32,6 +32,7 @@ class TestKmkKeys(unittest.TestCase):
                 {},
             ],
         )
+
         keyboard.test(
             'AltGr+Shifted key',
             [(1, True), (1, False)],
@@ -44,6 +45,7 @@ class TestKmkKeys(unittest.TestCase):
                 {},
             ],
         )
+
         keyboard.test(
             'AltGr+Shift+key',
             [(2, True), (2, False)],
@@ -56,6 +58,7 @@ class TestKmkKeys(unittest.TestCase):
                 {},
             ],
         )
+
         keyboard.test(
             'Shift+AltGr',
             [(3, True), (3, False)],
@@ -67,21 +70,10 @@ class TestKmkKeys(unittest.TestCase):
                 {},
             ],
         )
-        keyboard.test(
-            'AltGr+Shift+key, alternate chaining',
-            [(4, True), (4, False)],
-            [
-                {
-                    KC.N3,
-                    KC.LSFT,
-                    KC.RALT,
-                },
-                {},
-            ],
-        )
+
         keyboard.test(
             'AltGr',
-            [(5, True), (5, False)],
+            [(4, True), (4, False)],
             [
                 {
                     KC.RALT,
@@ -92,15 +84,15 @@ class TestKmkKeys(unittest.TestCase):
 
         keyboard.test(
             'Transparent',
-            [(6, True)],
+            [(5, True)],
             [{}],
         )
-        self.assertEqual(keyboard.keyboard._coordkeys_pressed, {6: KC.TRNS})
+        self.assertEqual(keyboard.keyboard._coordkeys_pressed, {5: KC.TRNS})
 
-        assert isinstance(KC.RGUI(no_press=True), ModifierKey)
-        assert isinstance(KC.RALT(KC.RGUI), ModifierKey)
-        assert isinstance(KC.Q(no_press=True), Key)
-        assert not isinstance(KC.Q(no_press=True), ModifierKey)
+        assert isinstance(KC.RGUI, ModifierKey)
+        assert isinstance(KC.RALT(KC.RGUI), ModifiedKey)
+        assert isinstance(KC.Q, Key)
+        assert not isinstance(KC.Q, ModifierKey)
         assert isinstance(KC.RALT(KC.Q), Key)
         assert not isinstance(KC.RALT(KC.Q), ModifierKey)
 
@@ -138,12 +130,10 @@ class TestKeys_dot(unittest.TestCase):
 
     def test_custom_key(self):
         created = make_key(
-            KC.N2.code,
-            names=(
-                'EURO',
-                '€',
-            ),
-            has_modifiers={KC.LSFT.code, KC.ROPT.code},
+            names=('EURO', '€'),
+            constructor=ModifiedKey,
+            code=KC.N2.code,
+            modifier=KC.LSFT(KC.ROPT),
         )
         assert created is KC.get('EURO')
         assert created is KC.get('€')
@@ -181,12 +171,10 @@ class TestKeys_index(unittest.TestCase):
 
     def test_custom_key(self):
         created = make_key(
-            KC['N2'].code,
-            names=(
-                'EURO',
-                '€',
-            ),
-            has_modifiers={KC['LSFT'].code, KC['ROPT'].code},
+            names=('EURO', '€'),
+            constructor=ModifiedKey,
+            code=KC['N2'].code,
+            modifier=KC.LSFT(KC.ROPT),
         )
         assert created is KC['EURO']
         assert created is KC['€']
@@ -229,12 +217,10 @@ class TestKeys_get(unittest.TestCase):
 
     def test_custom_key(self):
         created = make_key(
-            KC.get('N2').code,
-            names=(
-                'EURO',
-                '€',
-            ),
-            has_modifiers={KC.get('LSFT').code, KC.get('ROPT').code},
+            names=('EURO', '€'),
+            constructor=ModifiedKey,
+            code=KC.get('N2').code,
+            modifier=KC.LSFT(KC.ROPT),
         )
         assert created is KC.get('EURO')
         assert created is KC.get('€')
@@ -255,8 +241,8 @@ class TestKeys_instances(unittest.TestCase):
         KC.clear()
 
     def test_make_key_new_instance(self):
-        key1 = make_key(code=1)
-        key2 = make_key(code=1)
+        key1 = make_key(names=(), constructor=KeyboardKey, code=1)
+        key2 = make_key(names=(), constructor=KeyboardKey, code=1)
         assert key1 is not key2
         assert key1.code == key2.code
 

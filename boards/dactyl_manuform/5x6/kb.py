@@ -1,5 +1,3 @@
-import board
-
 from kmk.kmk_keyboard import KMKKeyboard as _KMKKeyboard
 from kmk.quickpin.pro_micro.avr_promicro import translate as avr
 from kmk.quickpin.pro_micro.helios import pinout as pins
@@ -28,7 +26,6 @@ class KMKKeyboard(_KMKKeyboard):
     # rgb_pixel_pin = pins[avr['D3']]
     # num_pixels = 12
     diode_orientation = DiodeOrientation.COLUMNS
-    # flake8: noqa
     # fmt: off
     coord_mapping = [
         0,  1,  2,  3,  4,  5,            36, 37, 38, 39, 40, 41,
@@ -40,3 +37,4 @@ class KMKKeyboard(_KMKKeyboard):
                             34, 35,   66, 67,
                             32, 33,   68, 69
     ]
+    # fmt:on

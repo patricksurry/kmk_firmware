@@ -1,66 +1,47 @@
+import board
 import supervisor
 
 from kb import KMKKeyboard
 
-from kmk.extensions.peg_oled_Display import (
-    Oled,
-    OledData,
-    OledDisplayMode,
-    OledReactionType,
-)
+from kmk.extensions.display import Display, TextEntry
+from kmk.extensions.display.ssd1306 import SSD1306
 from kmk.extensions.peg_rgb_matrix import Rgb_matrix
-from kmk.handlers.sequences import send_string
 from kmk.hid import HIDModes
 from kmk.keys import KC
 from kmk.modules.combos import Chord, Combos
 from kmk.modules.holdtap import HoldTapRepeat
 from kmk.modules.layers import Layers
+from kmk.modules.macros import Macros
 from kmk.modules.modtap import ModTap
-from kmk.modules.oneshot import OneShot
-from kmk.modules.split import Split, SplitSide, SplitType
+from kmk.modules.split import Split, SplitSide
+from kmk.modules.sticky_keys import StickyKeys
 
 supervisor.runtime.autoreload = False
 keyboard = KMKKeyboard()
+macros = Macros()
 modtap = ModTap()
 combos = Combos()
-oneshot = OneShot()
+sticky_keys = StickyKeys(release_after=450)
 layers = Layers()
-oneshot.tap_time = 450
 
 
-OS_LCTL = KC.OS(KC.LCTL)
-OS_LSFT = KC.OS(KC.LSFT)
-OS_LALT = KC.OS(KC.LALT)
-keyboard.modules.append(oneshot)
+SK_LCTL = KC.SK(KC.LCTL)
+SK_LSFT = KC.SK(KC.LSFT)
+SK_LALT = KC.SK(KC.LALT)
+keyboard.modules.append(sticky_keys)
 keyboard.modules.append(layers)
 keyboard.modules.append(modtap)
 keyboard.modules.append(combos)
+keyboard.modules.append(macros)
 
 # oled
-oled = Oled(
-    OledData(
-        corner_one={
-            0: OledReactionType.STATIC,
-            1: ['1 2 3 4 5 6', '', '', '', '', '', '', ''],
-        },
-        corner_two={
-            0: OledReactionType.STATIC,
-            1: [' 7 8 Layer', '', '', '', '', '', '', ' 7 8 Layer'],
-        },
-        corner_three={
-            0: OledReactionType.LAYER,
-            1: ['^', '  ^', '    ^', '      ^', '        ^', '          ^', '', ''],
-        },
-        corner_four={
-            0: OledReactionType.LAYER,
-            1: ['', '', '', '', '', '', ' ^', '   ^'],
-        },
-    ),
-    toDisplay=OledDisplayMode.TXT,
-    flip=True,
+display = Display(
+    display=SSD1306(sda=board.D4, scl=board.D5),
+    entries=[TextEntry(text='Layer: ', x=0, y=32, y_anchor='B')]
+    + [TextEntry(text=str(_), x=40, y=32, layer=_) for _ in range(9)],
 )
-# oled
-keyboard.extensions.append(oled)
+keyboard.extensions.append(display)
+
 # ledmap
 rgb = Rgb_matrix(
     ledDisplay=[
@@ -86,8 +67,8 @@ rgb = Rgb_matrix(
         [0, 255, 217],
         [0, 255, 217],
         [0, 255, 217],
-        ]
-    )
+    ]
+)
 # ledmap
 keyboard.extensions.append(rgb)
 
@@ -107,6 +88,7 @@ LT2_SP = KC.LT(3, KC.SPC, prefer_hold=True, tap_time=250, repeat=HoldTapRepeat.T
 TAB_SB = KC.LT(5, KC.TAB)
 SUPER_L = KC.LM(4, KC.LGUI)
 
+# fmt: off
 keyboard.keymap = [
     # DVORAK
     # ,-----------------------------------------.                    ,-----------------------------------------.
@@ -124,8 +106,8 @@ keyboard.keymap = [
         # DVORAK
         KC.ESC,   KC.QUOT, KC.COMM, KC.DOT,  KC.P,    KC.Y,                      KC.F,    KC.G,    KC.C,    KC.R,    KC.L,    KC.BSPC, \
         TAB_SB,   KC.A,    KC.O,    KC.E,    KC.U,    KC.I,                      KC.D,    KC.H,    KC.T,    KC.N,    KC.S,    KC.ENT, \
-        OS_LSFT,  KC.SCLN, KC.Q,    KC.J,    KC.K,    KC.X,                      KC.B,    KC.M,    KC.W,    KC.V,    KC.Z,    KC.SLSH, \
-                                        OS_LALT, SUPER_L, LT1_SP,   LT2_SP,  OS_LCTL, KC.NO,
+        SK_LSFT,  KC.SCLN, KC.Q,    KC.J,    KC.K,    KC.X,                      KC.B,    KC.M,    KC.W,    KC.V,    KC.Z,    KC.SLSH, \
+                                        SK_LALT, SUPER_L, LT1_SP,   LT2_SP,  SK_LCTL, KC.NO,
     ],
 
     # GAMING
@@ -227,15 +209,15 @@ keyboard.keymap = [
     ]
 
 ]
+# fmt:on
 
 combos.combos = [
-    Chord((KC.QUOT, KC.COMM), send_string('>_>')),
-    Chord((KC.COMM, KC.DOT), send_string('><')),
-    Chord((KC.C, KC.L), send_string("C'est la vie")),
+    Chord((KC.QUOT, KC.COMM), KC.MACRO('>_>')),
+    Chord((KC.COMM, KC.DOT), KC.MACRO('><')),
+    Chord((KC.C, KC.L), KC.MACRO("C'est la vie")),
     Chord((KC.BKSP, KC.L), KC.LCTL(KC.BKSP)),
     Chord((KC.R, KC.L), KC.LCTL(KC.V)),
     Chord((KC.V, KC.Z), KC.LCTL(KC.Z)),
-
 ]
 
 

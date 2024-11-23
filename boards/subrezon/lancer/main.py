@@ -1,5 +1,3 @@
-import board
-
 from kb import KMKKeyboard
 
 from kmk.extensions.media_keys import MediaKeys
@@ -11,6 +9,7 @@ keyboard = KMKKeyboard()
 keyboard.modules.append(Layers())
 keyboard.extensions.append(MediaKeys())
 
+# fmt:off
 keyboard.keymap = [
     [
      # QWERTY
@@ -61,6 +60,7 @@ keyboard.keymap = [
      #                          └─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘
     ],
 ]
+# fmt:on
 
 if __name__ == '__main__':
     keyboard.go()

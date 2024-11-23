@@ -4,7 +4,7 @@ from micropython import const
 
 from storage import getmount
 
-from kmk.keys import FIRST_KMK_INTERNAL_KEY, ConsumerKey, ModifierKey, MouseKey
+from kmk.keys import ConsumerKey, KeyboardKey, ModifierKey, MouseKey
 from kmk.utils import Debug, clamp
 
 try:
@@ -116,20 +116,14 @@ class AbstractHID:
         self.clear_all()
 
         for key in keys_pressed:
-            if key.code >= FIRST_KMK_INTERNAL_KEY:
-                continue
-
-            if isinstance(key, ModifierKey):
+            if isinstance(key, KeyboardKey):
+                self.add_key(key)
+            elif isinstance(key, ModifierKey):
                 self.add_modifier(key)
             elif isinstance(key, ConsumerKey):
                 self.add_cc(key)
             elif isinstance(key, MouseKey):
                 self.add_pd(key)
-            else:
-                self.add_key(key)
-                if key.has_modifiers:
-                    for mod in key.has_modifiers:
-                        self.add_modifier(mod)
 
         for axis in axes:
             self.move_axis(axis)
@@ -175,11 +169,7 @@ class AbstractHID:
 
     def add_modifier(self, modifier):
         if isinstance(modifier, ModifierKey):
-            if modifier.code == ModifierKey.FAKE_CODE:
-                for mod in modifier.has_modifiers:
-                    self.report_mods[0] |= mod
-            else:
-                self.report_mods[0] |= modifier.code
+            self.report_mods[0] |= modifier.code
         else:
             self.report_mods[0] |= modifier
 
@@ -187,11 +177,7 @@ class AbstractHID:
 
     def remove_modifier(self, modifier):
         if isinstance(modifier, ModifierKey):
-            if modifier.code == ModifierKey.FAKE_CODE:
-                for mod in modifier.has_modifiers:
-                    self.report_mods[0] ^= mod
-            else:
-                self.report_mods[0] ^= modifier.code
+            self.report_mods[0] ^= modifier.code
         else:
             self.report_mods[0] ^= modifier
 
@@ -367,7 +353,7 @@ class BLEHID(AbstractHID):
         while len(evt) < report_size + 1:
             evt.append(0)
 
-        return device.send_report(evt[1 : report_size + 1])
+        return device.send_report(evt[1 : report_size + 1])  # noqa: E203
 
     def clear_bonds(self):
         import _bleio

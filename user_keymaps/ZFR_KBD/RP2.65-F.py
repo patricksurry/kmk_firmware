@@ -1,5 +1,4 @@
 import board
-import usb_hid
 
 import ulab.numpy as np
 from kb import KMKKeyboard
@@ -179,6 +178,7 @@ def MN(note: str):
     return midi_keypress
 
 
+# fmt:off
 keyboard.keymap = [
     [   # Base Layer
         KC.ESC, KC.GRAVE,  KC.N1,    KC.N2,    KC.N3,    KC.N4,    KC.N5,    KC.N6,    KC.N7,    KC.N8,    KC.N9,    KC.N0,    KC.BSLS,  KC.DEL,     KC.MINS, KC.EQUAL,
@@ -197,7 +197,7 @@ keyboard.keymap = [
     ],
 
     [   # FN2 Layer
-        _______, _______,  KC.F1  ,  KC.F2  ,  KC.F3  ,  KC.F4  ,  KC.F5  ,  KC.F6  ,  KC.F7  ,  KC.F8  ,  KC.F9  ,  KC.F10 ,  KC.F11 ,  KC.F12 ,    _______, _______,
+        _______, _______,  KC.F1,    KC.F2,    KC.F3,    KC.F4,    KC.F5,    KC.F6,    KC.F7,    KC.F8,    KC.F9,    KC.F10,   KC.F11,   KC.F12,     _______, _______,
              _______,      _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,              _______, _______,
              _______,      _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,    _______, _______,
              _______,      _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,      _______,         _______,
@@ -220,6 +220,7 @@ keyboard.keymap = [
              XXXXXXX,      _______,   _______,              _______,             _______,              _______,   _______,   XXXXXXX,        _______,  _______,  _______,
     ],
 ]
+# fmt:on
 
 
 if __name__ == '__main__':

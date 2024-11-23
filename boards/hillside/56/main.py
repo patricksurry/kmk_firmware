@@ -6,29 +6,29 @@ from kmk.keys import KC
 from kmk.modules.capsword import CapsWord
 from kmk.modules.cg_swap import CgSwap
 from kmk.modules.layers import Layers
-from kmk.modules.oneshot import OneShot
 from kmk.modules.split import Split
+from kmk.modules.sticky_keys import StickyKeys
 
 keyboard = KMKKeyboard()
 keyboard.extensions.append(MediaKeys())
 
 rgb = RGB(
     pixel_pin=keyboard.rgb_pixel_pin,
-    num_pixels=5
+    num_pixels=5,
 )
 keyboard.extensions.append(rgb)
 keyboard.modules.append(CapsWord())
 keyboard.modules.append(CgSwap())
 keyboard.modules.append(Layers())
-keyboard.modules.append(OneShot())
+keyboard.modules.append(StickyKeys())
 split = Split(data_pin=keyboard.data_pin)
 keyboard.modules.append(split)
 
-OS_LSFT = KC.OS(KC.LSFT)
+SK_LSFT = KC.SK(KC.LSFT)
 LYR3 = KC.MO(3)
 LYR4 = KC.MO(4)
 LYR5 = KC.MO(5)
-OS_RALT = KC.OS(KC.RALT)
+SK_RALT = KC.SK(KC.RALT)
 RGB_M_P = KC.RGB_MODE_PLAIN
 RGB_M_B = KC.RGB_MODE_BREATHE
 RGB_M_R = KC.RGB_MODE_RAINBOW
@@ -36,6 +36,7 @@ RGB_M_BR = KC.RGB_MODE_BREATHE_RAINBOW
 RGB_M_K = KC.RGB_MODE_KNIGHT
 RGB_M_S = KC.RGB_MODE_SWIRL
 
+# fmt:off
 keyboard.keymap = [
     [   #QWERTY
         KC.GRV,  KC.Q,    KC.W,   KC.E,  KC.R,    KC.T,                                    KC.Y,    KC.U,    KC.I,    KC.O,    KC.P,    KC.BSPC,
@@ -59,9 +60,9 @@ keyboard.keymap = [
                  KC.TRNS, KC.TRNS, KC.TRNS,                                                                             KC.TRNS, KC.TRNS, KC.TRNS,
     ],
     [
-        KC.INS,  KC.EXLM, KC.AT,   KC.HASH, KC.DLR , KC.PERC,                                     KC.CIRC, KC.AMPR, KC.ASTR, KC.LPRN, KC.RPRN, KC.TRNS,
+        KC.INS,  KC.EXLM, KC.AT,   KC.HASH, KC.DLR,  KC.PERC,                                     KC.CIRC, KC.AMPR, KC.ASTR, KC.LPRN, KC.RPRN, KC.TRNS,
         KC.TRNS, KC.LGUI, KC.LALT, KC.LCTL, KC.LSFT, KC.NO,                                       KC.MINS, KC.EQL,  KC.LBRC, KC.RBRC, KC.BSLS, KC.TRNS,
-        KC.TRNS, KC.NO,   KC.NO,   KC.NO,   KC.NO,   KC.NO,   OS_RALT,                    KC.APP, KC.UNDS, KC.PLUS, KC.LCBR, KC.RCBR, KC.PIPE, KC.TRNS,
+        KC.TRNS, KC.NO,   KC.NO,   KC.NO,   KC.NO,   KC.NO,   SK_RALT,                    KC.APP, KC.UNDS, KC.PLUS, KC.LCBR, KC.RCBR, KC.PIPE, KC.TRNS,
         KC.TRNS,          KC.NO,            KC.TRNS, KC.TRNS, KC.TRNS, KC.TRNS,     LYR5, KC.DEL, KC.TRNS, KC.TRNS,          KC.PGUP,          KC.TRNS,
                  KC.NO,   KC.NO,   KC.NO,                                                                           KC.HOME, KC.PGDN, KC.END,
     ],
@@ -80,6 +81,7 @@ keyboard.keymap = [
                   KC.NO,    KC.NO,    KC.NO,                                                                                          KC.NO,      KC.NO,      KC.NO,
     ]
 ]
+# fmt:on
 
 if __name__ == '__main__':
     keyboard.go()

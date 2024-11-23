@@ -6,7 +6,6 @@ except ImportError:
 from collections import namedtuple
 from keypad import Event as KeyEvent
 
-from kmk.consts import UnicodeMode
 from kmk.hid import BLEHID, USBHID, AbstractHID, HIDModes
 from kmk.keys import KC, Key
 from kmk.modules import Module
@@ -45,8 +44,6 @@ class KMKKeyboard:
     diode_orientation = None
     matrix = None
 
-    unicode_mode = UnicodeMode.NOOP
-
     modules = []
     extensions = []
     sandbox = Sandbox()
@@ -67,7 +64,6 @@ class KMKKeyboard:
     _trigger_powersave_enable = False
     _trigger_powersave_disable = False
     _go_args = None
-    _processing_timeouts = False
     _resume_buffer = []
     _resume_buffer_x = []
 
@@ -75,8 +71,6 @@ class KMKKeyboard:
     # former use of reversed_active_layers which had pointless
     # overhead (the underlying list was never used anyway)
     active_layers = [0]
-
-    _timeouts = {}
 
     def __repr__(self) -> str:
         return self.__class__.__name__
@@ -191,14 +185,6 @@ class KMKKeyboard:
 
         self._resume_buffer_x = buffer
 
-    @property
-    def debug_enabled(self) -> bool:
-        return debug.enabled
-
-    @debug_enabled.setter
-    def debug_enabled(self, enabled: bool):
-        debug.enabled = enabled
-
     def pre_process_key(
         self,
         key: Key,
@@ -252,11 +238,9 @@ class KMKKeyboard:
         self._resume_buffer.append(ksf)
 
     def remove_key(self, keycode: Key) -> None:
-        self.keys_pressed.discard(keycode)
         self.process_key(keycode, False)
 
     def add_key(self, keycode: Key) -> None:
-        self.keys_pressed.add(keycode)
         self.process_key(keycode, True)
 
     def tap_key(self, keycode: Key) -> None:
@@ -273,21 +257,6 @@ class KMKKeyboard:
     def _process_timeouts(self) -> None:
         for task in get_due_task():
             task()
-
-    def _init_sanity_check(self) -> None:
-        '''
-        Ensure the provided configuration is *probably* bootable
-        '''
-        assert self.keymap, 'must define a keymap with at least one row'
-        assert (
-            self.hid_type in HIDModes.ALL_MODES
-        ), 'hid_type must be a value from kmk.consts.HIDModes'
-        if not self.matrix:
-            assert self.row_pins, 'no GPIO pins defined for matrix rows'
-            assert self.col_pins, 'no GPIO pins defined for matrix columns'
-            assert (
-                self.diode_orientation is not None
-            ), 'diode orientation must be defined'
 
     def _init_coord_mapping(self) -> None:
         '''
@@ -370,7 +339,7 @@ class KMKKeyboard:
                 debug_error(ext, 'during_bootup', err)
                 self.extensions[idx] = None
 
-        self.modules[:] = [_ for _ in self.modules if _]
+        self.extensions[:] = [_ for _ in self.extensions if _]
 
         if debug.enabled:
             debug('extensions=', [_.__class__.__name__ for _ in self.extensions])
@@ -467,17 +436,28 @@ class KMKKeyboard:
                 debug_error(ext, 'deinit', err)
 
     def go(self, hid_type=HIDModes.USB, secondary_hid_type=None, **kwargs) -> None:
-        self._init(hid_type=hid_type, secondary_hid_type=secondary_hid_type, **kwargs)
         try:
+            self._init(
+                hid_type=hid_type,
+                secondary_hid_type=secondary_hid_type,
+                **kwargs,
+            )
             while True:
                 self._main_loop()
         except Exception as err:
-            debug_error(self, 'Unexpected error', err)
+            import traceback
+
+            traceback.print_exception(err)
         finally:
             debug('cleaning up...')
             self._deinit_hid()
             self.deinit()
             debug('...done')
+
+            if not debug.enabled:
+                import supervisor
+
+                supervisor.reload()
 
     def _init(
         self,
@@ -491,7 +471,6 @@ class KMKKeyboard:
 
         if debug.enabled:
             debug('Initialising ', self)
-            debug('unicode_mode=', self.unicode_mode)
 
         self._init_hid()
         self._init_matrix()

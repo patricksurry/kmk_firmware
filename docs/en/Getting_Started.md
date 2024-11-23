@@ -8,7 +8,7 @@ Known working and recommended devices can be found in the [list of officially su
 ## TL;DR Quick start guide
 > To infinity and beyond!
 1. [Install CircuitPython version 7.3 or higher on your board](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython). With most boards, it should be as easy as drag and dropping the firmware on the drive
-2. Get a [copy of KMK](https://github.com/KMKfw/kmk_firmware/archive/refs/heads/master.zip) from the master branch 
+2. Get an up to date [copy of KMK](https://github.com/KMKfw/kmk_firmware/archive/refs/heads/main.zip) from the main branch 
 3. Unzip it and copy the KMK folder and the boot.py file at the root of the USB drive corresponding to your board (often appearing as CIRCUITPY)
 4. Create a new *code.py* or *main.py* file in the same root directory (same level as boot.py) with the example content hereunder: 
 
@@ -62,7 +62,7 @@ Once you've got the gist of it:
 - [International](international.md) extension adds keys for non US layouts and [Media Keys](media_keys.md) adds keys for ... media
 
 And to go even further:
-- [Sequences](sequences.md) are used for sending multiple keystrokes in a single action
+- [Macros](macros.md) are used for sending multiple keystrokes in a single action
 - [Layers](layers.md) can transform the whole way your keyboard is behaving with a single touch
 - [HoldTap](holdtap.md) allow you to customize the way a key behaves whether it is tapped or hold, and [TapDance](tapdance.md) depending on the number of times it is pressed
 
