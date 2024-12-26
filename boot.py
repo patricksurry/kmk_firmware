@@ -2,6 +2,7 @@ import digitalio
 import microcontroller
 import storage
 
+# boot file for nibble, to optionally disable USB drive
 
 mcp = microcontroller.pin
 dio = digitalio.DigitalInOut
@@ -23,4 +24,3 @@ for p in mux_cols:
 # i.e. mux_cols = (0,0,0,0) and rows[1].value is False
 if not rows[1].value:
     storage.disable_usb_drive()
-

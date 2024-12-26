@@ -1,9 +1,7 @@
-import board
-
 from kmk.kmk_keyboard import KMKKeyboard as _KMKKeyboard
 from kmk.modules.encoder import EncoderHandler
 from kmk.quickpin.pro_micro.bitc_promicro import pinout as pins
-from kmk.scanners import DiodeOrientation
+from kmk.scanners.keypad import DiodeOrientation
 
 # fmt:off
 encoder_pinout = [
@@ -28,6 +26,7 @@ class KMKKeyboard(_KMKKeyboard):
     # led = digitalio.DigitalInOut(board.D21)
     # led.direction = digitalio.Direction.OUTPUT
     # led.value = False
+    # key scanner sets row pins to true and reads col pins to find key presses
     row_pins = (
         pins[15],
         pins[9],
@@ -42,20 +41,19 @@ class KMKKeyboard(_KMKKeyboard):
         pins[16],
     )
     pixel_pin = pins[12]
-    diode_orientation = DiodeOrientation.ROW2COL
-    i2c = board.I2C  # TODO ??
-
+    diode_orientation = DiodeOrientation.COL2ROW
+#     i2c = board.I2C  # TODO ??
+#
     def __init__(self, active_encoders=[0], landscape_layout=False):
         super().__init__()
-
         if landscape_layout:
             self.coord_mapping = [
                 row * len(self.col_pins) + col
                 for col in range(len(self.col_pins))
                 for row in reversed(range(len(self.row_pins)))
             ]
-
         if active_encoders:
             self.encoders = EncoderHandler()
             self.encoders.pins = tuple([encoder_pinout[i] for i in active_encoders])
             self.modules.append(self.encoders)
+

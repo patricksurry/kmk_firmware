@@ -20,10 +20,10 @@ pinout = [
     board.D23,  # MOSI
     board.D20,  # MISO
     board.D22,  # SCK
-    board.D26,
-    board.D27,
-    board.D28,
-    board.D29,
+    board.D26,  # A0
+    board.D27,  # A1
+    board.D28,  # A2
+    board.D29,  # A3
     None,  # 3.3v
     None,  # RST
     None,  # GND

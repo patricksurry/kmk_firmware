@@ -19,9 +19,11 @@ KeyBufferFrame = namedtuple(
     'KeyBufferFrame', ('key', 'is_pressed', 'int_coord', 'index')
 )
 
+import traceback
 
 def debug_error(module, message: str, error: Exception):
     if debug.enabled:
+        traceback.print_exception(error)
         debug(
             message, ': ', error.__class__.__name__, ': ', error, name=module.__module__
         )

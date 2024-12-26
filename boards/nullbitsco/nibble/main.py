@@ -3,11 +3,27 @@ from kb import KMKKeyboard
 from kmk.extensions.media_keys import MediaKeys
 from kmk.extensions.rgb import RGB, AnimationModes
 from kmk.extensions.via import VIAShifter
+from kmk.modules.layers import Layers
 from kmk.keys import KC
 
+from microcontroller import pin
+
 keyboard = KMKKeyboard(encoder=True)    # assume encoder installed
-keyboard.extensions.append(MediaKeys())
-keyboard.extensions.append(VIAShifter())
+
+via = VIAShifter(CS_=pin.GPIO11, RDY=pin.GPIO12, SDA=pin.GPIO13, SCL=pin.GPIO14)
+
+rgb = RGB(
+    pixel_pin=keyboard.pixel_pin,
+    num_pixels=10,
+    hue_default=180,
+    sat_default=255,
+    val_default=50,
+    animation_mode=AnimationModes.BREATHING,
+    animation_speed=3,
+    breathe_center=2,
+)
+
+keyboard.extensions = [Layers(), MediaKeys(), via, rgb]
 
 XXXXX = KC.NO
 FN = KC.MO(1)
@@ -39,19 +55,6 @@ keyboard.keymap = [
 keyboard.encoders.map = [
     ( ( KC.VOLD, KC.VOLU, XXXXX),  ), # Layer 1, encoder 1
 ]
-
-rgb = RGB(
-    pixel_pin=keyboard.pixel_pin,
-    num_pixels=10,
-    hue_default=180,
-    sat_default=255,
-    val_default=50,
-    animation_mode=AnimationModes.BREATHING,
-    animation_speed=3,
-    breathe_center=2,
-)
-
-keyboard.extensions.append(rgb)
 
 if __name__ == '__main__':
     keyboard.go()

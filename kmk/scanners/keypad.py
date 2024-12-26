@@ -1,4 +1,5 @@
 import keypad
+import keypad_demux
 
 from kmk.scanners import Scanner
 
@@ -38,6 +39,12 @@ class MatrixScanner(KeypadScanner):
 
     def __init__(self, *args, **kwargs):
         self.keypad = keypad.KeyMatrix(*args, **kwargs)
+        super().__init__()
+
+
+class DemuxMatrixScanner(KeypadScanner):
+    def __init__(self, *args, **kwargs):
+        self.keypad = keypad_demux.DemuxKeyMatrix(*args, **kwargs)
         super().__init__()
 
 
